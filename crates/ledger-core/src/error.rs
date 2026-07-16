@@ -25,6 +25,13 @@ pub enum DomainError {
     #[error("invalid quantity: {reason}")]
     InvalidQuantity { reason: &'static str },
 
+    /// A transition absent from the declared table (INV-17).
+    #[error("invalid transition from {from:?} on {event}")]
+    InvalidTransition {
+        from: crate::order::OrderState,
+        event: &'static str,
+    },
+
     /// An identifier failed boundary validation.
     #[error("invalid {kind}: {reason}")]
     InvalidId {
