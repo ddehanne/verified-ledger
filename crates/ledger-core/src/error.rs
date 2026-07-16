@@ -25,6 +25,13 @@ pub enum DomainError {
     #[error("invalid quantity: {reason}")]
     InvalidQuantity { reason: &'static str },
 
+    /// An identifier failed boundary validation.
+    #[error("invalid {kind}: {reason}")]
+    InvalidId {
+        kind: &'static str,
+        reason: &'static str,
+    },
+
     /// A monetary amount failed validation.
     #[error("invalid money amount: {reason}")]
     InvalidMoney { reason: &'static str },
