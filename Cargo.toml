@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ledger-core",
+    "crates/ledger-storage",
+    "crates/ledger-cli",
+]
+[workspace.package]
+edition = "2024"
+license = "MIT"
+[workspace.lints.rust]
+unsafe_code = "forbid"
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
