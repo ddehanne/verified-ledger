@@ -73,6 +73,13 @@ impl UsdMoney {
     }
 }
 
+impl Default for UsdMoney {
+    /// Zero dollars — the only sensible default for an amount.
+    fn default() -> Self {
+        UsdMoney::ZERO
+    }
+}
+
 impl core::fmt::Display for UsdMoney {
     /// Render as dollars with sign and two decimals: `-12.34 USD`.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

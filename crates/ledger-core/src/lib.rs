@@ -5,3 +5,4 @@ pub mod ids;
 pub mod money;
 pub mod order;
 pub mod quantity;
+pub mod reducer;

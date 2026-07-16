@@ -25,6 +25,18 @@ pub enum DomainError {
     #[error("invalid quantity: {reason}")]
     InvalidQuantity { reason: &'static str },
 
+    /// Journal sequence not contiguous (ordering authority violated).
+    #[error("sequence gap: expected {expected}, got {got}")]
+    SequenceGap { expected: u64, got: u64 },
+
+    /// OrderCreated with an already-known order id.
+    #[error("duplicate order id: {order_id}")]
+    DuplicateOrderId { order_id: String },
+
+    /// Event references an order the ledger has never seen.
+    #[error("unknown order id: {order_id}")]
+    UnknownOrderId { order_id: String },
+
     /// A transition absent from the declared table (INV-17).
     #[error("invalid transition from {from:?} on {event}")]
     InvalidTransition {
