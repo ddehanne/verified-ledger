@@ -19,4 +19,11 @@ Target: `parse_journal_bytes(&[u8])` — the disk-facing attack surface.
 Contract: arbitrary bytes never panic (Ok with recovery, or typed error).
 Result: 17,461,635 runs in 121s, zero crashes, zero leaks.
 
-## Level 5 — Bounded model checking (Kani) — see kani proofs
+## Level 5 — Bounded model checking (Kani v0.67 / CBMC)
+Three proofs in `ledger-core/src/kani_proofs.rs` — symbolic, exhaustive
+within stated domains:
+- P1 `checked_add` total & exact over ALL i64 pairs (checked vs i128)
+- P2 sequence successor law characterized over ALL u64
+- P3 transition table: full state×event product — never panics,
+  no-mutation-on-error proven exhaustively (INV-17)
+Result: `Complete - 3 successfully verified harnesses, 0 failures.`
