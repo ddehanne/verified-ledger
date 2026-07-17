@@ -72,8 +72,8 @@ pub struct RecoveredJournal {
 
 /// Read + verify a journal file. See recovery contract above.
 pub fn read_journal(path: &Path) -> Result<RecoveredJournal, JournalError> {
-    let file = match File::open(path) {
-        Ok(f) => f,
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             return Ok(RecoveredJournal {
                 records: Vec::new(),
@@ -83,11 +83,25 @@ pub fn read_journal(path: &Path) -> Result<RecoveredJournal, JournalError> {
         }
         Err(e) => return Err(JournalError::Io { operation: "open", source: e }),
     };
+    parse_journal_bytes(&bytes)
+}
 
-    let mut lines: Vec<String> = Vec::new();
-    for l in BufReader::new(file).lines() {
-        lines.push(l.map_err(|e| JournalError::Io { operation: "read_line", source: e })?);
-    }
+/// Pure parsing + verification over raw bytes. This is the fuzz target:
+/// for ARBITRARY input it must never panic — only Ok (possibly with
+/// tail recovery) or a typed error. Invalid UTF-8 is an integrity
+/// violation (journals are NDJSON, therefore UTF-8 by contract).
+pub fn parse_journal_bytes(bytes: &[u8]) -> Result<RecoveredJournal, JournalError> {
+    let text = match core::str::from_utf8(bytes) {
+        Ok(t) => t,
+        Err(e) => {
+            return Err(JournalError::IntegrityViolation {
+                line: 0,
+                reason: format!("journal is not valid UTF-8: {e}"),
+            })
+        }
+    };
+    let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
+    let _ = &mut lines;
     // Trailing empty line (file ends with \n) is not a record.
     while lines.last().is_some_and(|l| l.trim().is_empty()) {
         lines.pop();
