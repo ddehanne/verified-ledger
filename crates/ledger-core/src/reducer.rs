@@ -14,7 +14,7 @@ use crate::error::DomainError;
 use crate::event::{EventPayload, EventRecord, Side};
 use crate::ids::{ExecutionId, OrderId, SequenceNumber};
 use crate::money::UsdMoney;
-use crate::order::{transition_order, Order, OrderEvent, TransitionClass};
+use crate::order::{Order, OrderEvent, TransitionClass, transition_order};
 use crate::quantity::OrderQuantity;
 
 /// Whole-ledger state. BTreeMap/BTreeSet for deterministic iteration
@@ -104,18 +104,27 @@ pub fn apply(
         EventPayload::OrderSubmitted { order_id } => {
             step(&mut next, record.sequence, order_id, OrderEvent::Submitted)?
         }
-        EventPayload::OrderAcknowledged { order_id } => {
-            step(&mut next, record.sequence, order_id, OrderEvent::Acknowledged)?
-        }
+        EventPayload::OrderAcknowledged { order_id } => step(
+            &mut next,
+            record.sequence,
+            order_id,
+            OrderEvent::Acknowledged,
+        )?,
         EventPayload::OrderRejected { order_id, .. } => {
             step(&mut next, record.sequence, order_id, OrderEvent::Rejected)?
         }
-        EventPayload::CancelRequested { order_id } => {
-            step(&mut next, record.sequence, order_id, OrderEvent::CancelRequested)?
-        }
-        EventPayload::CancelConfirmed { order_id } => {
-            step(&mut next, record.sequence, order_id, OrderEvent::CancelConfirmed)?
-        }
+        EventPayload::CancelRequested { order_id } => step(
+            &mut next,
+            record.sequence,
+            order_id,
+            OrderEvent::CancelRequested,
+        )?,
+        EventPayload::CancelConfirmed { order_id } => step(
+            &mut next,
+            record.sequence,
+            order_id,
+            OrderEvent::CancelConfirmed,
+        )?,
 
         EventPayload::ExecutionReceived {
             order_id,
@@ -132,26 +141,25 @@ pub fn apply(
                     &mut next,
                     record.sequence,
                     order_id,
-                    OrderEvent::Execution { quantity: *quantity },
+                    OrderEvent::Execution {
+                        quantity: *quantity,
+                    },
                 )?;
                 // Economic effects (position, cash) apply exactly once.
-                let side = next
-                    .orders
-                    .get(order_id)
-                    .map(|a| a.side)
-                    .ok_or_else(|| DomainError::UnknownOrderId {
+                let side = next.orders.get(order_id).map(|a| a.side).ok_or_else(|| {
+                    DomainError::UnknownOrderId {
                         order_id: order_id.as_str().to_owned(),
-                    })?;
+                    }
+                })?;
                 let signed_units = match side {
                     Side::Buy => quantity.as_units(),
                     Side::Sell => -quantity.as_units(),
                 };
-                next.net_position_units = next
-                    .net_position_units
-                    .checked_add(signed_units)
-                    .ok_or(DomainError::ArithmeticOverflow {
+                next.net_position_units = next.net_position_units.checked_add(signed_units).ok_or(
+                    DomainError::ArithmeticOverflow {
                         operation: "LedgerState::net_position_units",
-                    })?;
+                    },
+                )?;
                 let notional = price.checked_mul(quantity.as_units())?;
                 // Buy consumes cash, sell produces it.
                 next.cash_delta = match side {
@@ -162,7 +170,10 @@ pub fn apply(
             }
         }
 
-        EventPayload::CommissionReceived { execution_id, amount } => {
+        EventPayload::CommissionReceived {
+            execution_id,
+            amount,
+        } => {
             if !next.seen_executions.contains(execution_id) {
                 // Proof referencing an unknown execution: preserved as
                 // anomaly (corrected I4), not rejected.

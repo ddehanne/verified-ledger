@@ -3,11 +3,11 @@
 
 #![allow(clippy::unwrap_used)]
 
-use ledger_core::event::{EventPayload, EventRecord, Side, TimestampMicros, SCHEMA_VERSION_V1};
+use ledger_core::event::{EventPayload, EventRecord, SCHEMA_VERSION_V1, Side, TimestampMicros};
 use ledger_core::ids::{EventId, ExecutionId, OrderId, SequenceNumber};
 use ledger_core::money::UsdMoney;
 use ledger_core::quantity::{FilledQuantity, OrderQuantity};
-use ledger_core::reducer::{apply, replay, LedgerState};
+use ledger_core::reducer::{LedgerState, apply, replay};
 use proptest::prelude::*;
 
 const ORDER_POOL: [&str; 3] = ["ord-A", "ord-B", "ord-C"];
@@ -27,9 +27,14 @@ fn arb_payload() -> impl Strategy<Value = EventPayload> {
                 limit_price: None,
             }
         }),
-        oid.clone().prop_map(|o| EventPayload::OrderSubmitted { order_id: o }),
-        oid.clone().prop_map(|o| EventPayload::OrderAcknowledged { order_id: o }),
-        oid.clone().prop_map(|o| EventPayload::OrderRejected { order_id: o, reason: "r".into() }),
+        oid.clone()
+            .prop_map(|o| EventPayload::OrderSubmitted { order_id: o }),
+        oid.clone()
+            .prop_map(|o| EventPayload::OrderAcknowledged { order_id: o }),
+        oid.clone().prop_map(|o| EventPayload::OrderRejected {
+            order_id: o,
+            reason: "r".into()
+        }),
         (oid.clone(), eid.clone(), 1i64..30, 1i64..100_000).prop_map(|(o, e, q, p)| {
             EventPayload::ExecutionReceived {
                 order_id: o,
@@ -42,7 +47,8 @@ fn arb_payload() -> impl Strategy<Value = EventPayload> {
             execution_id: e,
             amount: UsdMoney::from_minor_units(c),
         }),
-        oid.clone().prop_map(|o| EventPayload::CancelRequested { order_id: o }),
+        oid.clone()
+            .prop_map(|o| EventPayload::CancelRequested { order_id: o }),
         oid.prop_map(|o| EventPayload::CancelConfirmed { order_id: o }),
     ]
 }

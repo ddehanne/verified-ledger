@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::DomainError;
 use crate::ids::OrderId;
-use crate::quantity::{fill_status, FillStatus, FilledQuantity, OrderQuantity};
+use crate::quantity::{FillStatus, FilledQuantity, OrderQuantity, fill_status};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum OrderState {
@@ -224,7 +224,10 @@ mod tests {
         assert_eq!(c, TransitionClass::Ordinary);
         let (o, _) = transition_order(&o, OrderEvent::Acknowledged).unwrap();
         let (o, c) = transition_order(&o, OrderEvent::Execution { quantity: fq(4) }).unwrap();
-        assert_eq!((o.state, c), (OrderState::PartiallyFilled, TransitionClass::Ordinary));
+        assert_eq!(
+            (o.state, c),
+            (OrderState::PartiallyFilled, TransitionClass::Ordinary)
+        );
         let (o, _) = transition_order(&o, OrderEvent::Execution { quantity: fq(6) }).unwrap();
         assert_eq!(o.state, OrderState::Filled);
     }
@@ -248,7 +251,10 @@ mod tests {
         let (o, c) = transition_order(&o, OrderEvent::Execution { quantity: fq(3) }).unwrap();
         assert_eq!(o.state, OrderState::IntegrityConflict);
         assert_eq!(o.filled, fq(3)); // evidence preserved
-        assert_eq!(c, TransitionClass::Anomalous(AnomalyKind::LateFillAfterTerminal));
+        assert_eq!(
+            c,
+            TransitionClass::Anomalous(AnomalyKind::LateFillAfterTerminal)
+        );
     }
 
     #[test]

@@ -26,8 +26,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
-const GENESIS_HASH: &str =
-    "0000000000000000000000000000000000000000000000000000000000000000";
+const GENESIS_HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
 #[derive(Debug, Error)]
 pub enum JournalError {
@@ -46,7 +45,11 @@ pub enum JournalError {
     IntegrityViolation { line: usize, reason: String },
 
     #[error("sequence violation at line {line}: expected {expected}, got {got}")]
-    SequenceViolation { line: usize, expected: u64, got: u64 },
+    SequenceViolation {
+        line: usize,
+        expected: u64,
+        got: u64,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -81,7 +84,12 @@ pub fn read_journal(path: &Path) -> Result<RecoveredJournal, JournalError> {
                 recovered_truncated_tail: false,
             });
         }
-        Err(e) => return Err(JournalError::Io { operation: "open", source: e }),
+        Err(e) => {
+            return Err(JournalError::Io {
+                operation: "open",
+                source: e,
+            });
+        }
     };
     parse_journal_bytes(&bytes)
 }
@@ -97,7 +105,7 @@ pub fn parse_journal_bytes(bytes: &[u8]) -> Result<RecoveredJournal, JournalErro
             return Err(JournalError::IntegrityViolation {
                 line: 0,
                 reason: format!("journal is not valid UTF-8: {e}"),
-            })
+            });
         }
     };
     let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
@@ -128,7 +136,7 @@ pub fn parse_journal_bytes(bytes: &[u8]) -> Result<RecoveredJournal, JournalErro
                 return Err(JournalError::IntegrityViolation {
                     line: line_no,
                     reason: format!("unparseable interior line: {e}"),
-                })
+                });
             }
         };
 
@@ -169,7 +177,11 @@ pub fn parse_journal_bytes(bytes: &[u8]) -> Result<RecoveredJournal, JournalErro
         records.push(line.record);
     }
 
-    Ok(RecoveredJournal { records, last_hash: prev_hash, recovered_truncated_tail: recovered })
+    Ok(RecoveredJournal {
+        records,
+        last_hash: prev_hash,
+        recovered_truncated_tail: recovered,
+    })
 }
 
 /// Append-only writer holding the chain head.
@@ -191,7 +203,10 @@ impl JournalWriter {
             .create(true)
             .append(true)
             .open(path)
-            .map_err(|e| JournalError::Io { operation: "open_append", source: e })?;
+            .map_err(|e| JournalError::Io {
+                operation: "open_append",
+                source: e,
+            })?;
         Ok((
             Self {
                 path: path.to_owned(),
@@ -212,12 +227,14 @@ impl JournalWriter {
         };
         let mut bytes = serde_json::to_vec(&line)?;
         bytes.push(b'\n');
-        self.file
-            .write_all(&bytes)
-            .map_err(|e| JournalError::Io { operation: "write", source: e })?;
-        self.file
-            .sync_data()
-            .map_err(|e| JournalError::Io { operation: "sync_data", source: e })?;
+        self.file.write_all(&bytes).map_err(|e| JournalError::Io {
+            operation: "write",
+            source: e,
+        })?;
+        self.file.sync_data().map_err(|e| JournalError::Io {
+            operation: "sync_data",
+            source: e,
+        })?;
         self.last_hash = record_hash;
         Ok(())
     }
@@ -230,27 +247,41 @@ impl JournalWriter {
 /// Rewrite the file keeping only the first `keep` lines (used once at
 /// open when a torn tail was detected). Atomic: tmp + rename.
 fn truncate_to_valid_prefix(path: &Path, keep: usize) -> Result<(), JournalError> {
-    let file = File::open(path)
-        .map_err(|e| JournalError::Io { operation: "open_for_truncate", source: e })?;
+    let file = File::open(path).map_err(|e| JournalError::Io {
+        operation: "open_for_truncate",
+        source: e,
+    })?;
     let kept: Vec<String> = BufReader::new(file)
         .lines()
         .take(keep)
         .collect::<Result<_, _>>()
-        .map_err(|e| JournalError::Io { operation: "read_for_truncate", source: e })?;
+        .map_err(|e| JournalError::Io {
+            operation: "read_for_truncate",
+            source: e,
+        })?;
 
     let tmp = path.with_extension("tmp_recover");
     {
-        let mut out = File::create(&tmp)
-            .map_err(|e| JournalError::Io { operation: "create_tmp", source: e })?;
+        let mut out = File::create(&tmp).map_err(|e| JournalError::Io {
+            operation: "create_tmp",
+            source: e,
+        })?;
         for l in &kept {
             out.write_all(l.as_bytes())
                 .and_then(|_| out.write_all(b"\n"))
-                .map_err(|e| JournalError::Io { operation: "write_tmp", source: e })?;
+                .map_err(|e| JournalError::Io {
+                    operation: "write_tmp",
+                    source: e,
+                })?;
         }
-        out.sync_data()
-            .map_err(|e| JournalError::Io { operation: "sync_tmp", source: e })?;
+        out.sync_data().map_err(|e| JournalError::Io {
+            operation: "sync_tmp",
+            source: e,
+        })?;
     }
-    std::fs::rename(&tmp, path)
-        .map_err(|e| JournalError::Io { operation: "rename_tmp", source: e })?;
+    std::fs::rename(&tmp, path).map_err(|e| JournalError::Io {
+        operation: "rename_tmp",
+        source: e,
+    })?;
     Ok(())
 }

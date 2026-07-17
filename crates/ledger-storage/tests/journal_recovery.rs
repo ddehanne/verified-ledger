@@ -7,12 +7,12 @@
 use std::fs::OpenOptions;
 use std::io::Write;
 
-use ledger_core::event::{EventPayload, EventRecord, Side, TimestampMicros, SCHEMA_VERSION_V1};
+use ledger_core::event::{EventPayload, EventRecord, SCHEMA_VERSION_V1, Side, TimestampMicros};
 use ledger_core::ids::{EventId, ExecutionId, OrderId, SequenceNumber};
 use ledger_core::money::UsdMoney;
 use ledger_core::quantity::{FilledQuantity, OrderQuantity};
 use ledger_core::reducer::replay;
-use ledger_storage::journal::{read_journal, JournalError, JournalWriter};
+use ledger_storage::journal::{JournalError, JournalWriter, read_journal};
 
 fn rec(seq: u64, payload: EventPayload) -> EventRecord {
     EventRecord {
@@ -28,22 +28,38 @@ fn rec(seq: u64, payload: EventPayload) -> EventRecord {
 fn sample_records(n: u64) -> Vec<EventRecord> {
     let oid = OrderId::new("ord-1").unwrap();
     let mut v = vec![
-        rec(1, EventPayload::OrderCreated {
-            order_id: oid.clone(),
-            side: Side::Buy,
-            quantity: OrderQuantity::new(100).unwrap(),
-            limit_price: None,
-        }),
-        rec(2, EventPayload::OrderSubmitted { order_id: oid.clone() }),
-        rec(3, EventPayload::OrderAcknowledged { order_id: oid.clone() }),
+        rec(
+            1,
+            EventPayload::OrderCreated {
+                order_id: oid.clone(),
+                side: Side::Buy,
+                quantity: OrderQuantity::new(100).unwrap(),
+                limit_price: None,
+            },
+        ),
+        rec(
+            2,
+            EventPayload::OrderSubmitted {
+                order_id: oid.clone(),
+            },
+        ),
+        rec(
+            3,
+            EventPayload::OrderAcknowledged {
+                order_id: oid.clone(),
+            },
+        ),
     ];
     for s in 4..=n {
-        v.push(rec(s, EventPayload::ExecutionReceived {
-            order_id: oid.clone(),
-            execution_id: ExecutionId::new(format!("ex-{s}")).unwrap(),
-            quantity: FilledQuantity::new(1).unwrap(),
-            price: UsdMoney::from_minor_units(10_000),
-        }));
+        v.push(rec(
+            s,
+            EventPayload::ExecutionReceived {
+                order_id: oid.clone(),
+                execution_id: ExecutionId::new(format!("ex-{s}")).unwrap(),
+                quantity: FilledQuantity::new(1).unwrap(),
+                price: UsdMoney::from_minor_units(10_000),
+            },
+        ));
     }
     v
 }
@@ -78,7 +94,8 @@ fn torn_final_line_is_recovered() {
 
     // Simulate SIGKILL mid-write: append garbage without newline.
     let mut f = OpenOptions::new().append(true).open(&path).unwrap();
-    f.write_all(br#"{"record":{"event_id":"evt-99","seq"#).unwrap();
+    f.write_all(br#"{"record":{"event_id":"evt-99","seq"#)
+        .unwrap();
     drop(f);
 
     let back = read_journal(&path).unwrap();
@@ -88,9 +105,12 @@ fn torn_final_line_is_recovered() {
     // Re-open heals the file and appending works again.
     let (mut w2, healed) = JournalWriter::open(&path).unwrap();
     assert!(healed.recovered_truncated_tail);
-    let next = rec(7, EventPayload::CancelRequested {
-        order_id: OrderId::new("ord-1").unwrap(),
-    });
+    let next = rec(
+        7,
+        EventPayload::CancelRequested {
+            order_id: OrderId::new("ord-1").unwrap(),
+        },
+    );
     w2.append(&next).unwrap();
     let final_read = read_journal(&path).unwrap();
     assert!(!final_read.recovered_truncated_tail);

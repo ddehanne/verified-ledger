@@ -1,0 +1,23 @@
+name: CI
+on:
+  push: { branches: [master] }
+  pull_request: { branches: [master] }
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with: { components: miri }
+      - run: cargo +nightly miri test -p ledger-core --lib
+      - run: cargo +nightly miri test -p ledger-core --test reducer_invariants

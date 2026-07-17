@@ -5,12 +5,10 @@
 
 #[cfg(kani)]
 mod proofs {
+    use crate::ids::OrderId;
     use crate::ids::SequenceNumber;
     use crate::money::UsdMoney;
-    use crate::order::{
-        transition_order, Order, OrderEvent, OrderState,
-    };
-    use crate::ids::OrderId;
+    use crate::order::{Order, OrderEvent, OrderState, transition_order};
     use crate::quantity::{FilledQuantity, OrderQuantity};
 
     /// P1 — Money arithmetic is total and honest over ALL i64 pairs:
