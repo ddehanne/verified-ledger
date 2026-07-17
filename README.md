@@ -25,14 +25,16 @@ correctness core such an engine would sit on.
   and re-verified at read time.
 - **INV-1** — an `ExecutionId` has economic effect at most once.
 - **INV-17** — undeclared transitions fail with a typed error and
-  provably zero mutation.
-- **Crash contract** — a torn *final* journal line is a crash artifact:
-  recover the longest valid prefix and heal. Corruption *before* the
-  last line is tampering: fatal, never guessed away.
+  provably zero mutation of the authoritative reducer state.
+- **Crash contract** — a torn final journal line is treated as a
+  recoverable crash artifact: recover the longest valid prefix and heal
+  the trailing fragment. Any integrity failure before the final line is
+  treated as fatal; the system does not infer, repair, or silently discard
+  historical evidence.
 
 ## Architecture
 crates/ledger-core      types, events, transition table, pure reducer
-crates/ledger-storage   hash-chained append-only journal (fsync WAL)
+crates/ledger-storage   hash-chained append-only durable journal (`fsync`)
 crates/ledger-cli       (minimal; replay/verify)
 fuzz/                   libFuzzer target on the byte-level parser
 

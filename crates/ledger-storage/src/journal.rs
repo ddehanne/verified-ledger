@@ -10,8 +10,9 @@
 //! Recovery contract (frozen; FAULT-01 formalized):
 //! - a corrupted/truncated LAST line = crash artifact → recover to the
 //!   longest valid prefix, report `recovered_truncated_tail = true`
-//! - corruption BEFORE the last line = evidence of tampering or disk
-//!   failure → fatal typed error; a ledger does not guess.
+//! - any integrity failure BEFORE the last line → fatal typed error;
+//!   the cause (tampering, bug, storage fault) is not inferable and the
+//!   system does not guess or repair historical evidence.
 //!
 //! Durability: `append` writes line + newline, then `sync_data`. The
 //! fsync-before-acknowledge discipline is the WAL contract (INV-6).
@@ -40,7 +41,7 @@ pub enum JournalError {
     #[error("serialization failure: {0}")]
     Serde(#[from] serde_json::Error),
 
-    /// Corruption strictly before the last line — NOT a crash artifact.
+    /// Integrity failure strictly before the last line — NOT a crash artifact.
     #[error("integrity violation at line {line}: {reason}")]
     IntegrityViolation { line: usize, reason: String },
 
@@ -140,7 +141,7 @@ pub fn parse_journal_bytes(bytes: &[u8]) -> Result<RecoveredJournal, JournalErro
             }
         };
 
-        // Hash chain checks — a broken chain is tampering wherever it is,
+        // Hash chain checks — a broken chain is fatal wherever it is,
         // EXCEPT a wrong record_hash on the very last line (torn write).
         let computed = hash_record(&line.record)?;
         if line.record_hash != computed {
