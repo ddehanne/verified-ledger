@@ -12,10 +12,11 @@ doesn't (integrity conflicts).
 This is not an execution engine and connects to no broker. It is the
 correctness core such an engine would sit on.
 
-A companion C++20 project (private, pre-v0.1) carries the same contract
-into live-execution engineering — durable journaling with an fsync
-dispatch-eligibility barrier, broker reconciliation, IBKR TWS API — and
-will be published as a sanitized mirror at v0.1.
+A companion C++20 project, [execution-journal](https://github.com/ddehanne/execution-journal),
+carries the same contract into live-execution engineering — durable
+journaling with an fsync dispatch-eligibility barrier, broker
+reconciliation, real-process fault injection, IBKR TWS API adapter
+exercised against a live paper gateway.
 
 ## Design laws
 
