@@ -41,12 +41,27 @@ exercised against a live paper gateway.
 ## Architecture
 crates/ledger-core      types, events, transition table, pure reducer
 crates/ledger-storage   hash-chained append-only durable journal (`fsync`)
-crates/ledger-cli       (minimal; replay/verify)
+crates/ledger-cli       read-only verify/replay commands
 fuzz/                   libFuzzer target on the byte-level parser
 
 State rebuild = `replay(journal)`. Purity ⇒ determinism ⇒
 crash-recovery-by-replay is sound (property-tested: prefix + suffix
 equals full replay).
+
+## Read-only command-line inspection
+
+```bash
+cargo run -p ledger-cli -- verify /path/to/journal.ndjson
+cargo run -p ledger-cli -- replay /path/to/journal.ndjson
+```
+
+Both commands require an existing regular file, validate the journal hash
+chain and contiguous sequences, and run semantic replay. `verify` reports
+the record count; `replay` prints the reducer state. They exit nonzero on
+errors, including a damaged final line, and **never modify the journal**.
+Use `JournalWriter::open` separately for the library's recovery policy;
+its torn-tail repair is deliberately not exposed by this CLI.
+
 
 ## Verification ladder (all reproducible)
 

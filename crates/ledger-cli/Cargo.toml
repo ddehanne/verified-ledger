@@ -7,3 +7,6 @@ ledger-core = { path = "../ledger-core" }
 ledger-storage = { path = "../ledger-storage" }
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile = "3"
