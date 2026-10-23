@@ -1,7 +1,7 @@
 # Verification Evidence
 
 ## Level 1 — Example tests
-32 unit/integration tests across the workspace (see crates' test files).
+33 unit/integration tests across the workspace (see crates' test files).
 
 ## Level 2 — Property tests (proptest)
 3 properties on arbitrary event journals (256 cases each per run):
@@ -20,10 +20,15 @@ Contract: arbitrary bytes never panic (Ok with recovery, or typed error).
 Result: 17,461,635 runs in 121s, zero crashes, zero leaks.
 
 ## Level 5 — Bounded model checking (Kani v0.67 / CBMC)
-Three proofs in `ledger-core/src/kani_proofs.rs` — symbolic, exhaustive
+Three proofs in `crates/ledger-core/src/kani_proofs.rs` — symbolic, exhaustive
 within stated domains:
 - P1 `checked_add` total & exact over ALL i64 pairs (checked vs i128)
 - P2 sequence successor law characterized over ALL u64
-- P3 transition table: full state×event product — never panics,
-  no-mutation-on-error proven exhaustively (INV-17)
+- P3 transition table: all nine modeled states and six event variants,
+  with symbolic quantities restricted by harness assumptions.
+  The harness checks its assertions exhaustively within these bounds;
+  it does not establish unrestricted quantity coverage. Because the
+  transition interface borrows the input immutably, its equality check
+  on error is not an independent proof of mutation safety throughout
+  the authoritative reducer (INV-17).
 Result: `Complete - 3 successfully verified harnesses, 0 failures.`
