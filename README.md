@@ -13,10 +13,9 @@ This is not an execution engine and connects to no broker. It is the
 correctness core such an engine would sit on.
 
 A companion C++20 project, [execution-journal](https://github.com/ddehanne/execution-journal),
-carries the same contract into live-execution engineering — durable
-journaling with an fsync dispatch-eligibility barrier, broker
-reconciliation, real-process fault injection, IBKR TWS API adapter
-exercised against a live paper gateway.
+explores related execution-integrity mechanisms in C++20, including
+durable journaling, dispatch eligibility, reconciliation and fault
+injection. Its verification scope is documented separately.
 
 ## Design laws
 
@@ -67,7 +66,7 @@ its torn-tail repair is deliberately not exposed by this CLI.
 
 | Level | Tool | Claim | Reproduce |
 |---|---|---|---|
-| 1 | `cargo test` | 32 example tests | `cargo test --workspace` |
+| 1 | `cargo test` | 33 example tests | `cargo test --workspace` |
 | 2 | proptest | 3 properties on arbitrary journals | same |
 | 3 | Miri | zero UB on all exercised paths | `cargo +nightly miri test -p ledger-core --lib` |
 | 4 | libFuzzer+ASAN | 17.4M runs, 0 crashes on `parse_journal_bytes` | `cargo +nightly fuzz run fuzz_target_1 -- -max_total_time=120` |
@@ -75,8 +74,10 @@ its torn-tail repair is deliberately not exposed by this CLI.
 
 Kani proofs: money arithmetic total & exact over **all** `i64` pairs
 (`i128` oracle); sequence successor law over **all** `u64`; transition
-table over the **full** state×event product — never panics,
-no-mutation-on-error.
+table across all nine modeled states and six event variants, with
+bounded symbolic quantities. The harness checks transition behavior
+within those bounds; it is not a proof over unrestricted quantities
+or of mutation behavior outside the pure transition interface.
 
 Details: [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
